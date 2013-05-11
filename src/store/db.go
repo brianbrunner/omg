@@ -7,6 +7,10 @@ import (
     "time"
     "encoding/base64"
     "persist"
+    "strings"
+    "bytes"
+    "encoding/gob"
+    "log"
 )
 
 type DB struct {
@@ -19,6 +23,20 @@ func Base64Encode(input []byte) []byte {
     encLength := enc.EncodedLen(len(input))
     output := make([]byte, encLength)
     enc.Encode(output, input)
+    return output
+}
+
+func Base64Decode(input []byte) []byte {
+    dec := base64.StdEncoding
+    decLength := dec.DecodedLen(len(input))
+    output := make([]byte, decLength)
+    n, err := dec.Decode(output, input)
+    if err != nil {
+        panic(err)
+    }
+    if n < decLength {
+       output = output[:n] 
+    }
     return output
 }
 
@@ -52,10 +70,12 @@ func (dbm *DBManager) run() {
         command = <- dbm.ComChan
         l = len(command.Args)
         args = command.Args[1:l]
-        function, ok := dbm.funcs[command.Args[0]]
+        function, ok := dbm.funcs[strings.ToLower(command.Args[0])]
         if ok {
             command.ReplyChan <- function(dbm.db,args)
-            dbm.PersistChan <- command.CommandRaw
+            if dbm.PersistChan != nil {
+                dbm.PersistChan <- command.CommandRaw
+            }
         } else {
             command.ReplyChan <- "-ERR Unknown command\r\n"
         }
@@ -66,10 +86,11 @@ func (dbm *DBManager) run() {
 func (dbm *DBManager) Init() {
     dbm.ComChan = make(chan Command,10000)
     dbm.db = new(DB)
-    dbm.db.store = make(map[string]*data.Entry)
-    dbm.PersistChan = persist.StartPersist()
+    dbm.db.store = make(map[string]*data.Entry,100000)
     dbm.funcs = make(map[string]func(*DB,[]string)(string))
     go dbm.run()
+    persist.LoadAppendOnlyFile()
+    dbm.PersistChan = persist.StartPersist()
 }
 
 var DefaultDBManager *DBManager = new(DBManager)
@@ -96,10 +117,10 @@ func (db *DB) StoreSet(key string, entry *data.Entry) {
     db.store[key] = entry
 }
 
-func (db *DB) StoreGet(key string, entryType data.EntryType) (*data.Entry, bool, error) {
+func (db *DB) StoreGet(key string, entryType int) (*data.Entry, bool, error) {
     elem, ok := db.store[key]
     if ok {
-        if elem.EType == entryType || entryType == data.Any {
+        if elem.EntryType == entryType || entryType == data.Any {
             if elem.Expires == 0 || elem.Expires > Milliseconds() {
                 return elem, true, nil
             } else {
@@ -121,6 +142,44 @@ func (db *DB) StoreDel(key string) (bool) {
     return ok
 }
 
+var gobBuf bytes.Buffer
+var enc *gob.Encoder
+var dec *gob.Decoder
+
+func (db *DB) StoreBase64Dump(key string) (string, bool) {
+    elem, ok, _ := db.StoreGet(key, data.Any)
+    if ok {
+        gobBuf.Reset()
+        err := enc.Encode(elem)
+        if err != nil {
+            log.Fatal("encode error:", err)
+            return "", false
+        } else {
+            str_rep := string(Base64Encode(gobBuf.Bytes()))
+            return str_rep, true
+        }
+    } else {
+        return "", false
+    }
+}
+
+func (db *DB) StoreBase64Load(key string, str_rep string) (bool) {
+    bytes_rep := Base64Decode([]byte(str_rep))
+    gobBuf.Reset()
+    gobBuf.Write(bytes_rep)
+    var elem data.Entry
+    err := dec.Decode(&elem)
+    if err != nil {
+        log.Fatal("decode error:", err)
+        return false
+    } else {
+        db.StoreSet(key,&elem)
+        return true
+    }
+}
+
 func init() {
+    enc = gob.NewEncoder(&gobBuf)
+    dec = gob.NewDecoder(&gobBuf)
     DefaultDBManager.Init()
 }

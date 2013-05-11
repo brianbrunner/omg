@@ -53,4 +53,21 @@ func init() {
         }
         return "$1\r\n0\r\n"
     })
+
+    store.DefaultDBManager.AddFunc("dump", func(db *store.DB, args []string) string {
+        str_rep, ok := db.StoreBase64Dump(args[0])
+        if ok {
+            return fmt.Sprintf("$%d\r\n%s\r\n",len(str_rep),str_rep)
+        } else {
+            return "$-1\r\n"
+        }
+    })
+    store.DefaultDBManager.AddFunc("restore", func(db *store.DB, args []string) string {
+        ok := db.StoreBase64Load(args[0],args[1])
+        if ok {
+            return "+OK\r\n"
+        } else {
+            return "$-1\r\n"
+        }
+    })
 }

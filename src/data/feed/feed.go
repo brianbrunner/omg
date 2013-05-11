@@ -6,6 +6,7 @@ import (
     "fmt"
     "strconv"
     "store"
+    "encoding/gob"
 )
 
 /*
@@ -26,14 +27,19 @@ type feed struct {
     posts []*post
 }
 
+var FeedType int = 21
+
 func init() {
+    data.RegisterStoreType(FeedType)
+    gob.Register(post{})
+    gob.Register(feed{})
     store.DefaultDBManager.AddFunc("feedcap", func (db *store.DB, args []string) string {
         s := args[0]
         cap, err := strconv.Atoi(args[1])
         if err != nil {
             return fmt.Sprintf("-ERR %s\r\n",err)
         }
-        e, ok, _ := db.StoreGet(s,data.Feed)
+        e, ok, _ := db.StoreGet(s,FeedType)
         if ok {
             if f, ok := e.Value.(*feed); ok {
                 f.capacity = cap
@@ -43,12 +49,12 @@ func init() {
             }
         } else {
             f := &feed{s,cap,0,make([]*post,0)}
-            db.StoreSet(s,&data.Entry{f, data.Feed, 0})
+            db.StoreSet(s,&data.Entry{f, FeedType, 0})
         }
         return "+OK\r\n"
     })
     store.DefaultDBManager.AddFunc("feedget", func (db *store.DB, args []string) string {
-        if e, ok, _ := db.StoreGet(args[0], data.Feed); ok {
+        if e, ok, _ := db.StoreGet(args[0], FeedType); ok {
             if f, ok := e.Value.(*feed); ok {
                 cap_str := fmt.Sprintf("%d",f.capacity)
                 return fmt.Sprintf("*2\r\n$%d\r\n%s\r\n$%d\r\n%s\r\n",len(f.name),f.name,len(cap_str),cap_str)
@@ -61,11 +67,11 @@ func init() {
         return "$-1\r\n"
     })
     store.DefaultDBManager.AddFunc("feedpost", func (db *store.DB, args []string) string {
-        e, ok, _ := db.StoreGet(args[0], data.Feed);
+        e, ok, _ := db.StoreGet(args[0], FeedType);
         if !ok {
             s := args[0]
             f := &feed{s,-1,0,make([]*post,0)}
-            e = &data.Entry{f, data.Feed, 0}
+            e = &data.Entry{f, FeedType, 0}
             db.StoreSet(s, e)
         }
         if f, ok := e.Value.(*feed); ok {
@@ -83,7 +89,7 @@ func init() {
         return "$-1\r\n"
     })
     store.DefaultDBManager.AddFunc("feedposts", func (db *store.DB, args []string) string {
-        if e, ok, _ := db.StoreGet(args[0],data.Feed); ok {
+        if e, ok, _ := db.StoreGet(args[0],FeedType); ok {
             if f, ok := e.Value.(*feed); ok {
                 var buffer bytes.Buffer
                 post_count := len(f.posts)
@@ -96,6 +102,16 @@ func init() {
                 return buffer.String()
             } else {
                 return "-ERR Type mismatch\r\n"
+            }
+        } else {
+            return "$-1\r\n"
+        }
+        return "$-1\r\n"
+    })
+    store.DefaultDBManager.AddFunc("feedlen", func (db *store.DB, args []string) string {
+        if e, ok, _ := db.StoreGet(args[0],FeedType); ok {
+            if f, ok := e.Value.(*feed); ok {
+                return fmt.Sprintf(":%d\r\n",len(f.posts))
             }
         } else {
             return "$-1\r\n"

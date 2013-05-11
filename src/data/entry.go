@@ -1,19 +1,14 @@
 package data 
 
-type EntryType uint8
-const (
-    Any = iota
-    Str
-    Hash
-    Set
-    SortedSet
-    User
-    Feed
-) 
+import (
+    "fmt"
+)
+
+var Any int = -1
 
 type Entry struct { 
     Value interface{}
-    EType EntryType
+    EntryType int
     Expires uint64
 }
 
@@ -24,4 +19,18 @@ func (e Entry) GetString() string {
         return ""
     }
     return ""
+}
+
+var usedTypes map[int]bool
+func init() {
+    usedTypes = make(map[int]bool)
+}
+
+func RegisterStoreType(entryNum int) {
+    _, ok := usedTypes[entryNum]
+    if !ok {
+        usedTypes[entryNum] = true
+    } else {
+        panic(fmt.Sprintf("You've used the same identifier, \"%i\", for multiple types",entryNum))
+    } 
 }

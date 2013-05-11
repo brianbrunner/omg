@@ -9,6 +9,11 @@ import (
     //"tracker"
     //"time"
     _ "funcs"
+    "log"
+    "os"
+    "flag"
+    "runtime/pprof"
+    "os/signal"
 )
 
 func handleConn(client net.Conn, comChan chan store.Command) {
@@ -43,7 +48,39 @@ func handleConn(client net.Conn, comChan chan store.Command) {
     }
 }
 
+var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to file")
+var memprofile = flag.String("memprofile", "", "write memory profile to this file")
+
 func main() {
+
+    flag.Parse()
+
+    if *cpuprofile != "" {
+        f, err := os.Create(*cpuprofile)
+        if err != nil {
+            log.Fatal(err)
+        }
+        pprof.StartCPUProfile(f)
+        c := make(chan os.Signal, 1)
+        signal.Notify(c, os.Interrupt)
+        go func(){
+            for _ = range c {
+                pprof.StopCPUProfile()
+                if *memprofile != "" {
+                    f, err := os.Create(*memprofile)
+                    if err != nil {
+                        log.Fatal(err)
+                    }
+                    pprof.WriteHeapProfile(f)
+                    f.Close()
+                }
+                os.Exit(1)
+            }
+        }()
+    }
+
+    
+
     ln, err := net.Listen("tcp", ":6379")
     if err != nil {
         fmt.Println("%s",err)   

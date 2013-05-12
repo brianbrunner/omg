@@ -149,6 +149,7 @@ var dec *gob.Decoder
 func (db *DB) StoreBase64Dump(key string) (string, bool) {
     elem, ok, _ := db.StoreGet(key, data.Any)
     if ok {
+        fmt.Println(*elem)
         gobBuf.Reset()
         err := enc.Encode(elem)
         if err != nil {
@@ -173,6 +174,7 @@ func (db *DB) StoreBase64Load(key string, str_rep string) (bool) {
         log.Fatal("decode error:", err)
         return false
     } else {
+        fmt.Println(elem)
         db.StoreSet(key,&elem)
         return true
     }

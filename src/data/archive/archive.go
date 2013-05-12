@@ -56,7 +56,7 @@ func init() {
         }
     })
     store.DefaultDBManager.AddFunc("unarchive", func(db *store.DB, args []string) string {
-        elem, ok, _ := db.StoreGet(args[0],ArchiveType)
+        _, ok, _ := db.StoreGet(args[0],ArchiveType)
         if ok {
             filename := fmt.Sprintf("./db/archive/%s.omg",args[0])
             data, err := ioutil.ReadFile(filename)

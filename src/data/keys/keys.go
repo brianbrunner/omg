@@ -70,4 +70,12 @@ func init() {
             return "$-1\r\n"
         }
     })
+    store.DefaultDBManager.AddFunc("type", func(db *store.DB, args []string) string {
+        elem, ok, _ := db.StoreGet(args[0], data.Any)
+        if ok {
+            return fmt.Sprintf(":%d\r\n",elem.EntryType)
+        } else {
+            return "$-1\r\n"
+        }
+    })
 }

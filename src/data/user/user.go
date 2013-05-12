@@ -20,7 +20,7 @@ type User struct {
 var UserType int = 20
 
 func init() {
-    gob.Register(User{})
+    gob.Register(*User{})
     data.RegisterStoreType(UserType)    
     store.DefaultDBManager.AddFunc("useradd", func (db *store.DB, args []string) string {
         s := args[0]

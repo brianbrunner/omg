@@ -2,6 +2,7 @@ package data
 
 import (
     "fmt"
+    "encoding/gob"
 )
 
 var Any int = -1
@@ -33,4 +34,8 @@ func RegisterStoreType(entryNum int) {
     } else {
         panic(fmt.Sprintf("You've used the same identifier, \"%i\", for multiple types",entryNum))
     } 
+}
+
+func init() {
+    gob.Register(&Entry{})
 }

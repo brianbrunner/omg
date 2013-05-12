@@ -9,7 +9,7 @@ import (
 )
 
 func LoadAppendOnlyFile() {
-
+    return // TODO fix this shit
     f, err := os.OpenFile("dump.omg", os.O_RDONLY|os.O_CREATE, 0600)
     if err != nil {
         panic(err)

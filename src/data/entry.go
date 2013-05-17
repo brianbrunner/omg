@@ -1,7 +1,6 @@
 package data 
 
 import (
-    "fmt"
     "encoding/gob"
 )
 
@@ -20,20 +19,6 @@ func (e Entry) GetString() string {
         return ""
     }
     return ""
-}
-
-var usedTypes map[int]bool
-func init() {
-    usedTypes = make(map[int]bool)
-}
-
-func RegisterStoreType(entryNum int) {
-    _, ok := usedTypes[entryNum]
-    if !ok {
-        usedTypes[entryNum] = true
-    } else {
-        panic(fmt.Sprintf("You've used the same identifier, \"%i\", for multiple types",entryNum))
-    } 
 }
 
 func init() {

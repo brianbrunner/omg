@@ -1,51 +1,53 @@
 package main
 
 import (
-    "fmt"
-    "net"
-    "bufio"
-    "parser"
-    "store"
-    //"tracker"
-    //"time"
-    _ "funcs"
-    "log"
-    "os"
-    "flag"
-    "runtime/pprof"
-    "os/signal"
+	"bufio"
+	"fmt"
+	"net"
+	"parser"
+	"store"
+	//"tracker"
+	//"time"
+	"flag"
+	"log"
+	"os"
+	"os/signal"
+	"runtime/pprof"
+	"store/com"
+
+	// import all of our db functions
+	_ "funcs"
 )
 
-func handleConn(client net.Conn, comChan chan store.Command) {
-    b := bufio.NewReader(client)
-    c := parser.CommandParser{}
-    reply := make(chan string)
-    var line string
-    var err error
-    var done bool
-    var command []string
-    var commandRaw string
-    //var lap = tracker.Lapper{time.Now()}
-    for {
-        line, err = b.ReadString('\n')
-        //lap.Lap("Read")
-        if err != nil { // EOF, or worse
-            fmt.Println("Connection closed")
+func handleConn(client net.Conn, comChan chan com.Command) {
+	b := bufio.NewReader(client)
+	c := parser.CommandParser{}
+    c.Reset()
+	reply := make(chan string)
+	line := make([]byte, 1024)
+	var err error
+	var done bool
+    var n int
+	var commands []com.Command
+	for {
+		n, err = b.Read(line[:])
+		if err != nil { 
+			fmt.Println("Connection closed")
+			break
+		}
+        done, commands, err = c.ParseBytes(line[:n])
+        if err != nil {
             break
         }
-        done, command, commandRaw, err = c.AddArg(line)
-        if err != nil {
-            continue
-        }
         if done {
-            //lap.Lap("Command parsed")
-            comChan <- store.Command{command,commandRaw,reply}
-            b := []byte(<-reply)
-            //lap.Lap("Command executed")
-            client.Write(b)
-            //lap.Lap("Response written")
+            for _, command := range commands {
+                command.ReplyChan = reply
+                comChan <- command
+                client.Write([]byte(<-reply))
+            }
+            c.Reset()
         }
-    }
+	}
 }
 
 var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to file")
@@ -53,48 +55,51 @@ var memprofile = flag.String("memprofile", "", "write memory profile to this fil
 
 func main() {
 
-    flag.Parse()
+	flag.Parse()
 
-    if *cpuprofile != "" {
-        f, err := os.Create(*cpuprofile)
-        if err != nil {
-            log.Fatal(err)
-        }
-        pprof.StartCPUProfile(f)
-        c := make(chan os.Signal, 1)
-        signal.Notify(c, os.Interrupt)
-        go func(){
-            for _ = range c {
-                pprof.StopCPUProfile()
-                if *memprofile != "" {
-                    f, err := os.Create(*memprofile)
-                    if err != nil {
-                        log.Fatal(err)
-                    }
-                    pprof.WriteHeapProfile(f)
-                    f.Close()
-                }
-                os.Exit(1)
-            }
-        }()
-    }
+	if *cpuprofile != "" {
+		f, err := os.Create(*cpuprofile)
+		if err != nil {
+			log.Fatal(err)
+		}
+		pprof.StartCPUProfile(f)
+		c := make(chan os.Signal, 1)
+		signal.Notify(c, os.Interrupt)
+		go func() {
+			for _ = range c {
+				pprof.StopCPUProfile()
+				if *memprofile != "" {
+					f, err := os.Create(*memprofile)
+					if err != nil {
+						log.Fatal(err)
+					}
+					pprof.WriteHeapProfile(f)
+					f.Close()
+				}
+				os.Exit(1)
+			}
+		}()
+	}
 
-    
+	ln, err := net.Listen("tcp", ":6379")
+	if err != nil {
+		fmt.Println("%s", err)
+	} else {
+		dbm := store.DefaultDBManager
 
-    ln, err := net.Listen("tcp", ":6379")
-    if err != nil {
-        fmt.Println("%s",err)   
-    } else {
-        dbm := store.DefaultDBManager
-        for {
-            conn, err := ln.Accept()
-            if err != nil {
-                fmt.Println("%s",err)
-            } else {
-                fmt.Println("New connection")
-                go handleConn(conn,dbm.ComChan)
-            }
-        }
-        close(dbm.ComChan)
-    }
+		reply := make(chan string)
+		dbm.ComChan <- com.Command{[]string{"load"}, "", reply}
+		<-reply
+
+		for {
+			conn, err := ln.Accept()
+			if err != nil {
+				fmt.Println("%s", err)
+			} else {
+				fmt.Println("New connection")
+				go handleConn(conn, dbm.ComChan)
+			}
+		}
+
+	}
 }

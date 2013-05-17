@@ -8,10 +8,10 @@ import (
     "fmt"
 )
 
-var ZSetType int = 3
+var ZSetType int = 4
 
 func init() {
-    data.RegisterStoreType(ZSetType)
+    store.RegisterStoreType(ZSetType)
     store.DefaultDBManager.AddFunc("zadd", func (db *store.DB, args []string) string {
         i, err := strconv.Atoi(args[1])
         if err != nil {
@@ -42,8 +42,6 @@ func init() {
             return "$-1\r\n"
         }
         zs, ok := elem.Value.(zset.ZSet)
-        fmt.Println(elem)
-        fmt.Println(zs)
         return fmt.Sprintf(":%d\r\n",zs.Card())
     })
     store.DefaultDBManager.AddFunc("zscore", func (db *store.DB, args []string) string {

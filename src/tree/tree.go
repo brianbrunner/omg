@@ -129,9 +129,28 @@ func (tree *StringTreeNode) delete(val int, str string) (*StringTreeNode, bool) 
                 } else if tree.Left != nil && tree.Right == nil {
                     return tree.Left, true
                 } else {
-                    panic("This case does not work")
                     tree.Val = tree.Left.Val
-                    tree.Left.delete(tree.Left.Val, str)
+
+                    node := tree.Left.HeadStr
+                    for node != nil {
+                        if tree.HeadStr == nil {
+                            tree.HeadStr = &SortedStringListNode{node.Str,nil}
+                        } else {
+                            tree.HeadStr.insert(node.Str)
+                        }
+                        tree.Count += 1
+                        node = node.Next
+                    }
+
+                    node = tree.HeadStr
+                    for node != nil {
+                        tree.Left, ok = tree.Left.delete(tree.Val, node.Str)
+                        if ok {
+                            tree.NodesToLeft -= 1
+                        }
+                        node = node.Next
+                    }
+
                     return tree, true
                 }
             } else {

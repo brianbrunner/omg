@@ -1,4 +1,4 @@
-package user
+package archive 
 
 import (
     "store"
@@ -6,11 +6,12 @@ import (
     "data"
     "os"
     "io/ioutil"
+    "store/reply"
 )
 
 type ArchiveJob struct {
     key string
-    data string
+    data []byte 
 }
 
 var ArchiveType int = 19 
@@ -23,36 +24,36 @@ func init() {
         for {
             archiveJob := <- archive_chan
             filename := fmt.Sprintf("./db/archive/%s.omg",archiveJob.key)
-            f, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE, 0600)
+            f, err := os.Create(filename)
             if err != nil {
                 panic(err)
             }
 
-            if _, err = f.WriteString(archiveJob.data); err != nil {
+            if _, err = f.Write(archiveJob.data); err != nil {
                 panic(err)
             }
             f.Close()
         }
     }()
 
-    data.RegisterStoreType(ArchiveType)    
+    store.RegisterStoreType(ArchiveType)    
     store.DefaultDBManager.AddFunc("archive", func(db *store.DB, args []string) string {
         elem, ok, _ := db.StoreGet(args[0],data.Any)
         if ok {
             if elem.EntryType != ArchiveType {
-                str_rep, ok := db.StoreBase64Dump(args[0])
+                str_rep, ok := db.StoreDump(args[0])
                 if ok {
                     archive_chan <- ArchiveJob{args[0],str_rep}
                     db.StoreSet(args[0],&data.Entry{0,19,0})
-                    return ":1\r\n"
+                    return reply.IntReply(1)
                 } else {
-                    return "$-1\r\n"
+                    return reply.NilReply
                 }
             } else {
-                return ":0\r\n"
+                return reply.IntReply(0)
             }
         } else {
-            return "$-1\r\n"
+            return reply.NilReply
         }
     })
     store.DefaultDBManager.AddFunc("unarchive", func(db *store.DB, args []string) string {
@@ -63,10 +64,10 @@ func init() {
             if err != nil {
                 panic(err)
             }
-            db.StoreBase64Load(args[0],string(data))
-            return "+OK\r\n"
+            db.StoreLoad(args[0],data)
+            return reply.OKReply
         } else {
-            return "$-1\r\n"
+            return reply.NilReply
         }
     })
 }

@@ -2,24 +2,24 @@ package strings
 
 import (
     "data"
-    "fmt"
     "store"
+    "store/reply"
 )
 
 var StringType int = 0
 
 func init() {
-    data.RegisterStoreType(StringType)
+    store.RegisterStoreType(StringType)
     store.DefaultDBManager.AddFunc("get", func (db *store.DB, args []string) string {
         elem, ok, err := db.StoreGet(args[0], StringType)
         if err != nil {
-            return fmt.Sprintf("-ERR %s\r\n",err)
+            return reply.ErrorReply(err)
         }
         if ok {
             s := elem.GetString()
-            return fmt.Sprintf("$%d\r\n%s\r\n",len(s),s)
+            return reply.BulkReply(s)
         }
-        return "$-1\r\n"
+        return reply.NilReply
     })
     store.DefaultDBManager.AddFunc("set", func (db *store.DB, args []string) string {
         elem, ok, _ := db.StoreGet(args[0], StringType)
@@ -28,15 +28,15 @@ func init() {
         } else {
             db.StoreSet(args[0], &data.Entry{args[1], StringType, 0})
         }
-        return "+OK\r\n"
+        return reply.OKReply
     })
     store.DefaultDBManager.AddFunc("setnx", func (db *store.DB, args []string) string {
         s := args[0]
         _, ok, _ := db.StoreGet(s, StringType)
         if ok {
-            return "$1\r\n0\r\n"
+            return reply.IntReply(0)
         }
         db.StoreSet(s, &data.Entry{args[1], StringType, 0})
-        return "$1\r\n1\r\n"
+        return reply.IntReply(1)
     })
 }

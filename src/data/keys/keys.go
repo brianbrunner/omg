@@ -1,13 +1,14 @@
 package keys
 
 import (
-    "fmt"
     "store"
+    "store/reply"
     "strconv"
     "data"
 )
 
 func init() {
+
     store.DefaultDBManager.AddFunc("del", func (db *store.DB, args []string) string {
         del_count := 0
         for _, v := range args {
@@ -16,66 +17,72 @@ func init() {
                 del_count += 1
             }
         }
-        return fmt.Sprintf(":%d\r\n",del_count)
+        return reply.IntReply(del_count)
     })
+
     store.DefaultDBManager.AddFunc("expire", func(db *store.DB, args []string) string {
         elem, ok, _ := db.StoreGet(args[0], data.Any)
         millis := store.Milliseconds()
         if ok && (elem.Expires == 0 || elem.Expires > millis) {
             expires, err := strconv.Atoi(args[1])
             if err != nil {
-                return ":0\r\n"
+                return reply.IntReply(0)
             } else {
                 elem.Expires = millis + uint64(expires*1000)
-                return ":1\r\n"
+                return reply.IntReply(1)
             }
         }
-        return ":0\r\n"
+        return reply.IntReply(0)
     })
+
     store.DefaultDBManager.AddFunc("pexpire", func(db *store.DB, args []string) string {
         elem, ok, _ := db.StoreGet(args[0], data.Any)
         millis := store.Milliseconds()
         if ok && (elem.Expires == 0 || elem.Expires > millis) {
             expires, err := strconv.Atoi(args[1])
             if err != nil {
-                return ":0\r\n"
+                return reply.IntReply(0)
             } else {
                 elem.Expires = millis + uint64(expires)
-                return ":1\r\n"
+                return reply.IntReply(1)
             }
         }
-        return ":0\r\n"
+        return reply.IntReply(0)
     })
+
     store.DefaultDBManager.AddFunc("exists", func(db *store.DB, args []string) string {
         _, ok, _ := db.StoreGet(args[0], data.Any)
         if ok {
-            return "$1\r\n1\r\n"
+            return reply.IntReply(1)
         }
-        return "$1\r\n0\r\n"
+        return reply.IntReply(0)
     })
 
     store.DefaultDBManager.AddFunc("dump", func(db *store.DB, args []string) string {
-        str_rep, ok := db.StoreBase64Dump(args[0])
+        bytes_rep, ok := db.StoreDump(args[0])
+        str_rep := string(bytes_rep)
         if ok {
-            return fmt.Sprintf("$%d\r\n%s\r\n",len(str_rep),str_rep)
+            return reply.BulkReply(str_rep)
         } else {
-            return "$-1\r\n"
+            return reply.NilReply
         }
     })
+
     store.DefaultDBManager.AddFunc("restore", func(db *store.DB, args []string) string {
-        ok := db.StoreBase64Load(args[0],args[1])
+        ok := db.StoreLoad(args[0],[]byte(args[1]))
         if ok {
-            return "+OK\r\n"
+            return reply.OKReply
         } else {
-            return "$-1\r\n"
+            return reply.NilReply
         }
     })
+
     store.DefaultDBManager.AddFunc("type", func(db *store.DB, args []string) string {
         elem, ok, _ := db.StoreGet(args[0], data.Any)
         if ok {
-            return fmt.Sprintf(":%d\r\n",elem.EntryType)
+            return reply.IntReply(elem.EntryType)
         } else {
-            return "$-1\r\n"
+            return reply.NilReply
         }
     })
 }

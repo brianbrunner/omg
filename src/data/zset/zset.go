@@ -12,7 +12,7 @@ var ZSetType int = 4
 
 func init() {
     store.RegisterStoreType(ZSetType)
-    store.DefaultDBManager.AddFunc("zadd", func (db *store.DB, args []string) string {
+    store.DefaultDBManager.AddFuncWithSideEffects("zadd", func (db *store.DB, args []string) string {
         i, err := strconv.Atoi(args[1])
         if err != nil {
             return "-ERR Invalid score\r\n"
@@ -27,7 +27,7 @@ func init() {
         zs.Insert(i,args[2])
         return ":1\r\n"
     })
-    store.DefaultDBManager.AddFunc("zrem", func (db *store.DB, args []string) string {
+    store.DefaultDBManager.AddFuncWithSideEffects("zrem", func (db *store.DB, args []string) string {
         elem, ok, _ := db.StoreGet(args[0],ZSetType)
         if !ok {
             return "$-1\r\n"

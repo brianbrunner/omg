@@ -15,7 +15,7 @@ func init() {
 
     store.RegisterStoreType(SetType)
 
-    store.DefaultDBManager.AddFunc("sadd", func (db *store.DB, args []string) string {
+    store.DefaultDBManager.AddFuncWithSideEffects("sadd", func (db *store.DB, args []string) string {
         e, ok, err := db.StoreGet(args[0], SetType)
         if err != nil {
             return reply.ErrorReply("Type Mismatch")
@@ -38,7 +38,7 @@ func init() {
         return reply.IntReply(count)
     })
 
-    store.DefaultDBManager.AddFunc("srem", func (db *store.DB, args []string) string {
+    store.DefaultDBManager.AddFuncWithSideEffects("srem", func (db *store.DB, args []string) string {
 
         e, ok, err := db.StoreGet(args[0], SetType)
         if err != nil {
@@ -66,7 +66,7 @@ func init() {
     })
 
 
-    store.DefaultDBManager.AddFunc("srem", func (db *store.DB, args []string) string {
+    store.DefaultDBManager.AddFuncWithSideEffects("srem", func (db *store.DB, args []string) string {
         e, ok, err := db.StoreGet(args[0], SetType)
         if err != nil {
             return reply.ErrorReply("Type Mismatch")
@@ -116,7 +116,7 @@ func init() {
         return reply.IntReply(0)
     })
 
-    store.DefaultDBManager.AddFunc("spop", func (db *store.DB, args []string) string {
+    store.DefaultDBManager.AddFuncWithSideEffects("spop", func (db *store.DB, args []string) string {
         e, ok, err := db.StoreGet(args[0], SetType)
         if err != nil || !ok {
             return "-ERR Type Mismatch\r\n"

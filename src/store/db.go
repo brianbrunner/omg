@@ -13,6 +13,7 @@ import (
     "log"
     "os"
     "store/com"
+    "path/filepath"
 )
 
 var usedTypes map[int]string
@@ -48,15 +49,46 @@ func Base64Decode(input []byte) []byte {
  * Command Handler
  */
 
+type DBFunc struct {
+    function func(*DB,[]string)(string, error)
+    sideEffects bool
+}
+
 type DBManager struct {
     db *DB
     ComChan chan com.Command
     PersistChan chan string
-    funcs map[string]func(*DB,[]string)(string)
+    funcs map[string]DBFunc
+}
+
+func (dbm *DBManager) AddFuncWithSideEffects(key string, function func(*DB,[]string)(string)) {
+    rec_function := func(db *DB,args []string) (str string, err error) {
+        defer func() {
+            if r := recover(); r != nil {
+              err = r.(error)
+              str = ""
+            }
+        }()
+        
+        str = function(db, args)
+        return str, nil
+    }
+    dbm.funcs[key] = DBFunc{rec_function, true}
 }
 
 func (dbm *DBManager) AddFunc(key string, function func(*DB,[]string)(string)) {
-    dbm.funcs[key] = function
+    rec_function := func(db *DB,args []string) (str string, err error) {
+        defer func() {
+            if r := recover(); r != nil {
+              err = r.(error)
+              str = ""
+            }
+        }()
+        
+        str = function(db, args)
+        return str, nil
+    }
+    dbm.funcs[key] = DBFunc{rec_function, false}
 }
 
 func (dbm *DBManager) run() {
@@ -68,11 +100,15 @@ func (dbm *DBManager) run() {
         command = <- dbm.ComChan
         l = len(command.Args)
         args = command.Args[1:l]
-        function, ok := dbm.funcs[strings.ToLower(command.Args[0])]
+        db_func, ok := dbm.funcs[strings.ToLower(command.Args[0])]
         if ok {
-            command.ReplyChan <- function(dbm.db,args)
-            if dbm.PersistChan != nil {
+            if dbm.PersistChan != nil && db_func.sideEffects {
                 dbm.PersistChan <- command.CommandRaw
+            }
+            if str, err := db_func.function(dbm.db,args); err != nil {
+                command.ReplyChan <- fmt.Sprintf("-ERR %s\r\n",err)
+            } else {
+                command.ReplyChan <- str
             }
         } else {
             command.ReplyChan <- "-ERR Unknown command\r\n"
@@ -85,10 +121,8 @@ func (dbm *DBManager) Init() {
     dbm.ComChan = make(chan com.Command,10000)
     dbm.db = new(DB)
     dbm.db.Store = make(map[string]*data.Entry,100000)
-    dbm.funcs = make(map[string]func(*DB,[]string)(string))
+    dbm.funcs = make(map[string]DBFunc)
     go dbm.run()
-    persist.LoadAppendOnlyFile()
-
     dbm.PersistChan = persist.StartPersist(dbm.ComChan)
 }
 
@@ -139,6 +173,16 @@ func (db *DB) StoreDel(key string) (bool) {
         delete(db.Store, key)
     }
     return ok
+}
+
+func (db *DB) StoreKeysMatch(pattern string) ([]string) {
+  keys := []string{}
+  for key, _ := range db.Store {
+    if ok, _ := filepath.Match(pattern, key); ok {
+      keys = append(keys,key)
+    }
+  }
+  return keys
 }
 
 var gobBuf bytes.Buffer
@@ -205,6 +249,10 @@ func (db *DB) LoadFromDiskSync() (error) {
     } else {
         return nil
     }
+}
+
+func (dbm *DBManager) LoadFromDiskSync() (error) {
+    return dbm.db.LoadFromDiskSync()
 }
 
 func RegisterPrefixedStoreType(entryNum int, prefix string) {

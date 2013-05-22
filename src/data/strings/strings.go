@@ -21,7 +21,7 @@ func init() {
         }
         return reply.NilReply
     })
-    store.DefaultDBManager.AddFunc("set", func (db *store.DB, args []string) string {
+    store.DefaultDBManager.AddFuncWithSideEffects("set", func (db *store.DB, args []string) string {
         elem, ok, _ := db.StoreGet(args[0], StringType)
         if ok {
             elem.Value = args[1]
@@ -30,7 +30,7 @@ func init() {
         }
         return reply.OKReply
     })
-    store.DefaultDBManager.AddFunc("setnx", func (db *store.DB, args []string) string {
+    store.DefaultDBManager.AddFuncWithSideEffects("setnx", func (db *store.DB, args []string) string {
         s := args[0]
         _, ok, _ := db.StoreGet(s, StringType)
         if ok {

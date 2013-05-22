@@ -14,25 +14,34 @@ type CommandParser struct {
     buffer bytes.Buffer
     raw_buffer bytes.Buffer
     commands []com.Command
+    skip bool
 }
 
 func (c *CommandParser) ParseBytes(in_bytes []byte) (bool, []com.Command, error) {
-    skip := false
     for _, v := range in_bytes {
         c.raw_buffer.WriteByte(v)
-        if skip && v == '\n' {
-            skip = false
+        if c.skip && v == '\n' {
+            c.skip = false
             continue
         }
         if c.count == -1 {
             if v == '\r' {
-                c.count, _ = strconv.Atoi(c.buffer.String())
+                var err error
+                if err != nil {
+                    panic(err)
+                }
+                c.count, err = strconv.Atoi(c.buffer.String())
                 c.buffer.Reset()
                 c.args = []string{}
                 c.arg_len = -1
                 c.cur_count = 0
-                skip = true
-            } else if (v != '*') {
+                c.skip = true
+            } else if v == '*' {
+                c.raw_buffer.Reset()
+                c.raw_buffer.WriteByte(v)
+            } else if v == '\n' {
+                c.raw_buffer.Reset()
+            } else {
                 c.buffer.WriteByte(v)
             }
         } else {
@@ -40,7 +49,7 @@ func (c *CommandParser) ParseBytes(in_bytes []byte) (bool, []com.Command, error)
                 if v == '\r' {
                     c.arg_len, _ = strconv.Atoi(c.buffer.String())
                     c.buffer.Reset()
-                    skip = true
+                    c.skip = true
                 } else if v != '$' {
                     c.buffer.WriteByte(v)
                 }
@@ -51,9 +60,11 @@ func (c *CommandParser) ParseBytes(in_bytes []byte) (bool, []com.Command, error)
                     c.buffer.Reset()
                     c.cur_count += 1
                     if c.cur_count == c.count {
+                        c.raw_buffer.WriteByte('\n')
                         c.commands = append(c.commands,com.Command{c.args,c.raw_buffer.String(),nil})
+                        c.Restart()
                     }
-                    skip = true
+                    c.skip = true
                 } else {
                     c.buffer.WriteByte(v)
                 }
@@ -68,11 +79,15 @@ func (c *CommandParser) ParseBytes(in_bytes []byte) (bool, []com.Command, error)
 }
 
 func (c *CommandParser) Reset() {
+    c.commands = []com.Command{}
+}
+
+func (c *CommandParser) Restart() {
     c.count = -1
     c.cur_count = 0
     c.arg_len = -1
     c.args = []string{}
     c.buffer.Reset()
     c.raw_buffer.Reset()
-    c.commands = []com.Command{}
+    c.skip = false
 }

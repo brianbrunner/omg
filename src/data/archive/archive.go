@@ -37,7 +37,7 @@ func init() {
     }()
 
     store.RegisterStoreType(ArchiveType)    
-    store.DefaultDBManager.AddFunc("archive", func(db *store.DB, args []string) string {
+    store.DefaultDBManager.AddFuncWithSideEffects("archive", func(db *store.DB, args []string) string {
         elem, ok, _ := db.StoreGet(args[0],data.Any)
         if ok {
             if elem.EntryType != ArchiveType {
@@ -56,7 +56,7 @@ func init() {
             return reply.NilReply
         }
     })
-    store.DefaultDBManager.AddFunc("unarchive", func(db *store.DB, args []string) string {
+    store.DefaultDBManager.AddFuncWithSideEffects("unarchive", func(db *store.DB, args []string) string {
         _, ok, _ := db.StoreGet(args[0],ArchiveType)
         if ok {
             filename := fmt.Sprintf("./db/archive/%s.omg",args[0])

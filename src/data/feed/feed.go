@@ -36,7 +36,7 @@ func init() {
 
     store.RegisterPrefixedStoreType(FeedType,"user")
 
-    store.DefaultDBManager.AddFunc("feedcap", func (db *store.DB, args []string) string {
+    store.DefaultDBManager.AddFuncWithSideEffects("feedcap", func (db *store.DB, args []string) string {
         s := args[0]
         cap, err := strconv.Atoi(args[1])
         if err != nil {
@@ -74,7 +74,7 @@ func init() {
         }
     })
 
-    store.DefaultDBManager.AddFunc("feedpost", func (db *store.DB, args []string) string {
+    store.DefaultDBManager.AddFuncWithSideEffects("feedpost", func (db *store.DB, args []string) string {
         e, ok, _ := db.StoreGet(args[0], FeedType);
         if !ok {
             s := args[0]
@@ -127,6 +127,6 @@ func init() {
         return reply.NilReply
     })
 
-    //store.DefaultDBManager.AddFunc("feedlike", func (db *store.DB, args []string) string {
+    //store.DefaultDBManager.AddFuncWithSideEffects("feedlike", func (db *store.DB, args []string) string {
     //})
 }

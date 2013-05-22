@@ -26,7 +26,7 @@ func init() {
 
     store.RegisterPrefixedStoreType(UserType,"user")    
 
-    store.DefaultDBManager.AddFunc("useradd", func (db *store.DB, args []string) string {
+    store.DefaultDBManager.AddFuncWithSideEffects("useradd", func (db *store.DB, args []string) string {
         s := args[0]
         _, ok, _ := db.StoreGet(s,UserType)
         if ok {
@@ -61,7 +61,7 @@ func init() {
         }
     })
 
-    store.DefaultDBManager.AddFunc("userauth", func (db *store.DB, args []string) string {
+    store.DefaultDBManager.AddFuncWithSideEffects("userauth", func (db *store.DB, args []string) string {
         username := args[0]
         e, ok, _ := db.StoreGet(username,UserType)
         if ok {

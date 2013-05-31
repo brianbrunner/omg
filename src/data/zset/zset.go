@@ -8,7 +8,7 @@ import (
     "fmt"
 )
 
-var ZSetType int = 4
+var ZSetType uint8 = 4
 
 func init() {
     store.RegisterStoreType(ZSetType)
@@ -20,7 +20,7 @@ func init() {
         elem, ok, err := db.StoreGet(args[0],ZSetType)
         if !ok {
             zs := zset.New()
-            elem = &data.Entry{zs,ZSetType,0}
+            elem = &data.Entry{zs,ZSetType}
             db.StoreSet(args[0],elem)
         }
         zs, _ := elem.Value.(zset.ZSet)

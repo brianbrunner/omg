@@ -7,62 +7,67 @@ import (
     "store/com"
     "bufio"
     "parser"
+    "fmt"
+    //"config"
+    //"strconv"
 )
 
 var persistDisabled bool = true
 
 func LoadAppendOnlyFile(comChan chan com.Command) {
-    f, err := os.Open("./db/store.oaf")
-    if err != nil {
-        panic(err)
-    }
+  f, err := os.Open("./db/store.oaf")
+  if err != nil {
+    return
+  }
 
 	b := bufio.NewReader(f)
 	c := parser.CommandParser{}
-    c.Reset()
-    c.Restart()
+  c.Reset()
+  c.Restart()
 	reply := make(chan string)
 	line := make([]byte, 1024)
 	var done bool
-    var n int
+  var n int
 	var commands []com.Command
 	for {
 		n, err = b.Read(line[:])
 		if err != nil { 
 			break
 		}
-        done, commands, err = c.ParseBytes(line[:n])
-        if err != nil {
-            break
-        }
-        if done {
-            for _, command := range commands {
-                command.ReplyChan = reply
-                comChan <- command
-                <-reply
-            }
-            c.Reset()
-        }
+    done, commands, err = c.ParseBytes(line[:n])
+    if err != nil {
+      fmt.Println(err)
+      break
+    }
+    if done {
+      for _, command := range commands {
+        command.ReplyChan = reply
+        comChan <- command
+        <-reply
+      }
+      c.Reset()
+    }
 	}
 
     persistDisabled = false
     
 }
 
-func StartPersist(comChan chan com.Command) (chan string) {
+func StartPersist(comChan chan com.Command) (chan string, chan uint8) {
 
-    persistChan := make(chan string,1000000)
+    persistChan := make(chan string)
+    stateChan := make(chan uint8)
 
     go func() {
-        f, err := os.OpenFile("./db/store.oaf", os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
+        AOF, err := os.OpenFile("./db/store.oaf", os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
         if err != nil {
             panic(err)
         }
 
-        defer f.Close()
-        
+        var saveAOF *os.File
+
         aof_tick := time.Tick(1 * time.Second)
-        odb_tick := time.Tick(60 * time.Second)
+        odb_tick := time.Tick(600 * time.Second)
 
         reply := make(chan string)
 
@@ -71,34 +76,100 @@ func StartPersist(comChan chan com.Command) (chan string) {
         for {
             select {
             case <-aof_tick:
+
                 if persistDisabled {
                     continue
                 }
-                if _, err = f.WriteString(comBuffer.String()); err != nil {
+
+                if _, err = AOF.WriteString(comBuffer.String()); err != nil {
+                    AOF.Close()
+                    saveAOF.Close()
                     panic(err)
                 }
-                if err = f.Sync(); err != nil {
+                if err = AOF.Sync(); err != nil {
+                    AOF.Close()
+                    saveAOF.Close()
                     panic(err)
                 }
+           
+                if saveAOF != nil {
+
+                  if _, err = saveAOF.WriteString(comBuffer.String()); err != nil {
+                      AOF.Close()
+                      saveAOF.Close()
+                      panic(err)
+                  }
+                  if err = saveAOF.Sync(); err != nil {
+                      AOF.Close()
+                      saveAOF.Close()
+                      panic(err)
+                  }
+
+                }
+           
                 comBuffer.Reset()
+
             case <-odb_tick:
+
+                continue
                 if persistDisabled {
                     continue
                 }
-                comChan <- com.Command{[]string{"SAVE"},"",reply}
+
+                comChan <- com.Command{[]string{"bgsave"},"",reply}
                 <-reply
-                f, err = os.Create("./db/store.oaf")
-                if err != nil {
-                    panic(err)
-                }
+
             case command := <-persistChan:
                 if persistDisabled {
                     continue
                 }
-                command = command
                 comBuffer.WriteString(command)
+            case state := <- stateChan:
+
+                if state == 0 {
+
+                  saveAOF, err = os.Create("/tmp/store.oaf")
+                  if err != nil {
+                    stateChan <- 0
+                  } else {
+                    stateChan <- 1
+                  }
+
+                } else if state == 1 {
+
+                  saveAOF.Close()
+                  stateChan <- 1
+
+                } else if state == 2 {
+
+                  if saveAOF != nil {
+
+                    if err = saveAOF.Sync(); err != nil {
+                      stateChan <- 0
+                    }
+
+                    if err := os.Rename("/tmp/store.oaf","./db/store.oaf"); err != nil {
+                      stateChan <- 0
+                    }
+
+                    saveAOF = nil
+
+                    AOF, err = os.OpenFile("./db/store.oaf", os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
+                    if err != nil {
+                        panic(err)
+                    }
+
+                    stateChan <- 1
+      
+                  } else {
+
+                    stateChan <- 0
+
+                  }
+
+                }
             }
         }
     }()
-    return persistChan
+    return persistChan, stateChan
 }

@@ -15,6 +15,7 @@ type CommandParser struct {
     raw_buffer bytes.Buffer
     commands []com.Command
     skip bool
+    count_or_millis bool
 }
 
 func (c *CommandParser) ParseBytes(in_bytes []byte) (bool, []com.Command, error) {
@@ -30,13 +31,29 @@ func (c *CommandParser) ParseBytes(in_bytes []byte) (bool, []com.Command, error)
                 if err != nil {
                     panic(err)
                 }
-                c.count, err = strconv.Atoi(c.buffer.String())
-                c.buffer.Reset()
-                c.args = []string{}
-                c.arg_len = -1
-                c.cur_count = 0
-                c.skip = true
+                count, err := strconv.Atoi(c.buffer.String())
+                if err != nil {
+                  c.buffer.Reset()
+                  c.raw_buffer.Reset()
+                  continue
+                }
+                if c.count_or_millis {
+                  c.count = count
+                  c.buffer.Reset()
+                  c.args = []string{}
+                  c.arg_len = -1
+                  c.cur_count = 0
+                  c.skip = true
+                } else {
+                  c.buffer.Reset()
+                  c.raw_buffer.Reset()
+                }
             } else if v == '*' {
+                c.count_or_millis = true
+                c.raw_buffer.Reset()
+                c.raw_buffer.WriteByte(v)
+            } else if v == '&' {
+                c.count_or_millis = false 
                 c.raw_buffer.Reset()
                 c.raw_buffer.WriteByte(v)
             } else if v == '\n' {
@@ -90,4 +107,5 @@ func (c *CommandParser) Restart() {
     c.buffer.Reset()
     c.raw_buffer.Reset()
     c.skip = false
+    c.count_or_millis = true
 }

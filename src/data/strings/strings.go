@@ -6,7 +6,7 @@ import (
     "store/reply"
 )
 
-var StringType int = 0
+var StringType uint8 = 0
 
 func init() {
     store.RegisterStoreType(StringType)
@@ -26,7 +26,7 @@ func init() {
         if ok {
             elem.Value = args[1]
         } else {
-            db.StoreSet(args[0], &data.Entry{args[1], StringType, 0})
+            db.StoreSet(args[0], &data.Entry{args[1], StringType})
         }
         return reply.OKReply
     })
@@ -36,7 +36,7 @@ func init() {
         if ok {
             return reply.IntReply(0)
         }
-        db.StoreSet(s, &data.Entry{args[1], StringType, 0})
+        db.StoreSet(s, &data.Entry{args[1], StringType})
         return reply.IntReply(1)
     })
 }

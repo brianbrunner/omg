@@ -7,7 +7,7 @@ import (
     "encoding/gob"
 )
 
-var SetType int = 3
+var SetType uint8 = 3
 
 func init() {
 
@@ -23,7 +23,7 @@ func init() {
         setData, ok := e.Value.(map[string]bool)
         if !ok {
             setData = make(map[string]bool)
-            db.StoreSet(args[0],&data.Entry{setData,SetType,0})
+            db.StoreSet(args[0],&data.Entry{setData,SetType})
         }
         l := len(args)
         sdata := args[1:l]
@@ -48,7 +48,7 @@ func init() {
         setData, ok := e.Value.(map[string]bool)
         if !ok {
             setData = make(map[string]bool)
-            db.StoreSet(args[0],&data.Entry{setData,SetType,0})
+            db.StoreSet(args[0],&data.Entry{setData,SetType})
         }
 
         l := len(args)

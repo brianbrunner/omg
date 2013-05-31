@@ -14,7 +14,9 @@ import (
   "os/signal"
   "runtime/pprof"
   "store/com"
-    "persist"
+  "persist"
+  "config"
+  "runtime"
 
   // import all of our db functions
   _ "funcs"
@@ -67,16 +69,27 @@ func handleConn(client net.Conn, comChan chan com.Command) {
   }
 }
 
-var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to file")
-var memprofile = flag.String("memprofile", "", "write memory profile to this file")
+var cpuprofile = flag.String("cpu", "", "write cpu profile to file")
+var memprofile = flag.String("mem", "", "write memory profile to this file")
+var configfile = flag.String("config", "./omg.conf", "read configuration options from this file")
 
 func main() {
+
+  flag.Parse()
+
+  num_cpus := runtime.NumCPU()
+  fmt.Println("Running with",num_cpus,"cpus")
+  runtime.GOMAXPROCS(num_cpus)
+
+  //
+  // Parse config file
+  //
+
+  config.ParseConfigFile(*configfile)
 
   //
   // CPU and Memory Profiler Code
   //
-
-  flag.Parse()
 
   if *cpuprofile != "" {
     f, err := os.Create(*cpuprofile)
@@ -104,7 +117,8 @@ func main() {
 
   // Create a server to listen for connections
 
-  ln, err := net.Listen("tcp", ":6379")
+  port := fmt.Sprintf(":%s",config.Config["port"])
+  ln, err := net.Listen("tcp", port)
   if err != nil {
     fmt.Println("%s", err)
   } else {
@@ -115,8 +129,12 @@ func main() {
 
     // load data from the odb and oaf files
 
+    fmt.Println("Loading saved database...")
+
     dbm.LoadFromDiskSync()
     persist.LoadAppendOnlyFile(dbm.ComChan)
+
+    fmt.Println("DB is open for business")
 
     for {
 

@@ -18,7 +18,7 @@ type User struct {
     Score int
 }
 
-var UserType int = 20
+var UserType uint8 = 20
 
 func init() {
 
@@ -36,7 +36,7 @@ func init() {
             b64_hash := store.Base64Encode(raw_hash)
             final_hash := fmt.Sprintf("$%d$%d$%d$%s",16384,8,1,string(b64_hash))
             user := &User{args[0],final_hash,"",0}
-            db.StoreSet(args[0], &data.Entry{user, UserType, 0})
+            db.StoreSet(args[0], &data.Entry{user, UserType})
             return reply.OKReply
         }
         return reply.OKReply
@@ -79,7 +79,7 @@ func init() {
                     }
                     token := store.Base64Encode(b)
                     token_str := string(token)
-                    db.StoreSet(token_str,&data.Entry{username,0,0})
+                    db.StoreSet(token_str,&data.Entry{username,0})
                     if user.Token != "" {
                         db.StoreDel(token_str)
                     }

@@ -5,6 +5,7 @@ import (
   "store/reply"
   "strconv"
   "data"
+  "fmt"
 )
 
 func init() {
@@ -21,14 +22,14 @@ func init() {
   })
 
   store.DefaultDBManager.AddFuncWithSideEffects("expire", func(db *store.DB, args []string) string {
-    elem, ok, _ := db.StoreGet(args[0], data.Any)
-    millis := store.Milliseconds()
-    if ok && (elem.Expires == 0 || elem.Expires > millis) {
+    _, ok, _ := db.StoreGet(args[0], data.Any)
+    if ok {
+      millis := store.Milliseconds()
       expires, err := strconv.Atoi(args[1])
       if err != nil {
         return reply.IntReply(0)
       } else {
-        elem.Expires = millis + uint64(expires*1000)
+        db.ExpiryRecord[args[0]] = millis + uint64(expires*1000)
         return reply.IntReply(1)
       }
     }
@@ -36,14 +37,14 @@ func init() {
   })
 
   store.DefaultDBManager.AddFuncWithSideEffects("pexpire", func(db *store.DB, args []string) string {
-    elem, ok, _ := db.StoreGet(args[0], data.Any)
-    millis := store.Milliseconds()
-    if ok && (elem.Expires == 0 || elem.Expires > millis) {
+    _, ok, _ := db.StoreGet(args[0], data.Any)
+    if ok {
+      millis := store.Milliseconds()
       expires, err := strconv.Atoi(args[1])
       if err != nil {
         return reply.IntReply(0)
       } else {
-        elem.Expires = millis + uint64(expires)
+        db.ExpiryRecord[args[0]] = millis + uint64(expires)
         return reply.IntReply(1)
       }
     }
@@ -60,6 +61,7 @@ func init() {
 
   store.DefaultDBManager.AddFunc("dump", func(db *store.DB, args []string) string {
     bytes_rep, ok := db.StoreDump(args[0])
+    fmt.Println(bytes_rep)
     str_rep := string(bytes_rep)
     if ok {
       return reply.BulkReply(str_rep)
@@ -69,7 +71,10 @@ func init() {
   })
 
   store.DefaultDBManager.AddFuncWithSideEffects("restore", func(db *store.DB, args []string) string {
-    ok := db.StoreLoad(args[0],[]byte(args[1]))
+    unquoted_data, _ := strconv.Unquote(args[1])
+    fmt.Println(unquoted_data)
+    bytes_rep := []byte(unquoted_data)
+    ok := db.StoreLoad(args[0],bytes_rep)
     if ok {
       return reply.OKReply
     } else {
@@ -80,7 +85,7 @@ func init() {
   store.DefaultDBManager.AddFunc("type", func(db *store.DB, args []string) string {
     elem, ok, _ := db.StoreGet(args[0], data.Any)
     if ok {
-      return reply.IntReply(elem.EntryType)
+      return reply.IntReply(int(elem.EntryType))
     } else {
       return reply.NilReply
     }
@@ -94,6 +99,13 @@ func init() {
       writer.WriteString(key)
     }
     return writer.String()
+  })
+
+  store.DefaultDBManager.AddFunc("randomkey", func(db *store.DB, args []string) string {
+    for key, _ := range db.Store {
+      return reply.BulkReply(key)
+    }
+    return reply.NilReply
   })
 
 }

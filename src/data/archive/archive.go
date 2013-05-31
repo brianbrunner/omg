@@ -14,7 +14,7 @@ type ArchiveJob struct {
     data []byte 
 }
 
-var ArchiveType int = 19 
+var ArchiveType uint8 = 19 
 var archive_chan chan ArchiveJob = make(chan ArchiveJob, 100000)
 
 func init() {
@@ -44,7 +44,7 @@ func init() {
                 str_rep, ok := db.StoreDump(args[0])
                 if ok {
                     archive_chan <- ArchiveJob{args[0],str_rep}
-                    db.StoreSet(args[0],&data.Entry{0,19,0})
+                    db.StoreSet(args[0],&data.Entry{0,19})
                     return reply.IntReply(1)
                 } else {
                     return reply.NilReply

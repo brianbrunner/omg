@@ -27,7 +27,7 @@ type Feed struct {
     Posts []*Post
 }
 
-var FeedType int = 21
+var FeedType uint8 = 21
 
 func init() {
 
@@ -52,7 +52,7 @@ func init() {
             }
         } else {
             f := &Feed{s,cap,0,make([]*Post,0)}
-            db.StoreSet(s,&data.Entry{f, FeedType, 0})
+            db.StoreSet(s,&data.Entry{f, FeedType})
         }
         return reply.OKReply
     })
@@ -79,7 +79,7 @@ func init() {
         if !ok {
             s := args[0]
             f := &Feed{s,-1,0,make([]*Post,0)}
-            e = &data.Entry{f, FeedType, 0}
+            e = &data.Entry{f, FeedType}
             db.StoreSet(s, e)
         }
         if f, ok := e.Value.(*Feed); ok {

@@ -125,7 +125,7 @@ func (dbm *DBManager) run() {
 
 
 func (dbm *DBManager) Init() {
-    dbm.ComChan = make(chan com.Command)
+    dbm.ComChan = make(chan com.Command,10000)
     dbm.db = new(DB)
     dbm.db.InSaveMode = false
     dbm.db.lastDump = 0

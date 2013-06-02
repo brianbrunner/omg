@@ -17,6 +17,7 @@ type Post struct {
     Author string
     Body string
     Timestamp uint64
+    Expires uint64
     Likers map[string]string
 }
 
@@ -34,7 +35,7 @@ func init() {
     gob.Register(&Post{})
     gob.Register(&Feed{})
 
-    store.RegisterPrefixedStoreType(FeedType,"user")
+    store.RegisterStoreType(FeedType)
 
     store.DefaultDBManager.AddFuncWithSideEffects("feedcap", func (db *store.DB, args []string) string {
         s := args[0]
@@ -88,7 +89,7 @@ func init() {
                 timestamp += 1
             }
             f.LastTimestamp = timestamp
-            p := &Post{args[1],args[2],timestamp,make(map[string]string)}
+            p := &Post{args[1],args[2],timestamp,0,make(map[string]string)}
             f.Posts = append(f.Posts, p)
             return reply.OKReply
         } else {
@@ -99,10 +100,35 @@ func init() {
     store.DefaultDBManager.AddFunc("feedposts", func (db *store.DB, args []string) string {
         if e, ok, _ := db.StoreGet(args[0],FeedType); ok {
             if f, ok := e.Value.(*Feed); ok {
-                var rep reply.MultiBulkWriter
                 post_count := len(f.Posts)
+                offset := 0
+                count := post_count
+                if len(args) == 3 {
+
+                  var err error
+                  offset, err = strconv.Atoi(args[1])
+                  if err != nil {
+                    panic(err)
+                  }
+
+                  count, err = strconv.Atoi(args[2])
+                  if err != nil {
+                    panic(err)
+                  }
+
+                }
+
+                if offset >= post_count {
+                  return reply.NilReply
+                }
+
+                if offset + count > post_count {
+                  count = post_count-offset
+                }
+
+                var rep reply.MultiBulkWriter
                 rep.WriteCount(3*post_count)
-                for i := post_count-1; i >= 0; i-- { 
+                for i := post_count-offset; i >= post_count-offset-count; i-- { 
                     p := f.Posts[i]
                     timestamp_str := fmt.Sprintf("%d",p.Timestamp)
                     rep.WriteString(p.Author)

@@ -18,7 +18,7 @@ import (
     "io"
 )
 
-var usedTypes map[uint8]string
+var usedTypes map[uint8]uint8
 
 type DB struct {
     Store map[string]*data.Entry
@@ -459,7 +459,7 @@ func (db *DB) LoadFromDiskSync() (error) {
 }
 
 func (dbm *DBManager) LoadFromDiskSync() (error) {
-    return dbm.db.LoadFromDiskSync()
+  return dbm.db.LoadFromDiskSync()
 }
 
 func MemInUse() (uint64) {
@@ -468,23 +468,17 @@ func MemInUse() (uint64) {
   return memStats.HeapAlloc
 }
 
-
-
-func RegisterPrefixedStoreType(entryNum uint8, prefix string) {
+func RegisterStoreType(entryNum uint8) {
     _, ok := usedTypes[entryNum]
     if !ok {
-        usedTypes[entryNum] = prefix
+        usedTypes[entryNum] = 1
     } else {
         panic(fmt.Sprintf("You've used the same identifier, \"%i\", for multiple types",entryNum))
     } 
 }
 
-func RegisterStoreType(entryNum uint8) {
-    RegisterPrefixedStoreType(entryNum, "")
-}
-
 func init() {
-    usedTypes = make(map[uint8]string)
+    usedTypes = make(map[uint8]uint8)
     enc = gob.NewEncoder(&gobBuf)
     dec = gob.NewDecoder(&gobBuf)
     DefaultDBManager.Init()

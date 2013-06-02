@@ -24,7 +24,7 @@ func init() {
 
     gob.Register(&User{})
 
-    store.RegisterPrefixedStoreType(UserType,"user")    
+    store.RegisterStoreType(UserType)    
 
     store.DefaultDBManager.AddFuncWithSideEffects("useradd", func (db *store.DB, args []string) string {
         s := args[0]

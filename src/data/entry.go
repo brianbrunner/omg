@@ -20,8 +20,12 @@ func (e Entry) GetString() string {
     return ""
 }
 
+func (e Entry) Type() uint8 {
+    return (e.EntryType & 0x7F)
+}
+
 func (e Entry) IsType(testType uint8) bool {
-  return (e.EntryType & (0 << 7)) == testType || testType == Any
+  return e.Type() == testType || testType == Any
 }
 
 func (e *Entry) LastDump() uint8 {
@@ -32,7 +36,7 @@ func (e *Entry) SetLastDump(lastDump uint8) {
   if lastDump == 1 {
     e.EntryType = e.EntryType | 0x80
   } else {
-    e.EntryType = e.EntryType & 0x00
+    e.EntryType = e.EntryType & 0x7F
   }
 }
 

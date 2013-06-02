@@ -85,7 +85,7 @@ func init() {
   store.DefaultDBManager.AddFunc("type", func(db *store.DB, args []string) string {
     elem, ok, _ := db.StoreGet(args[0], data.Any)
     if ok {
-      return reply.IntReply(int(elem.EntryType))
+      return reply.IntReply(int(elem.Type()))
     } else {
       return reply.NilReply
     }

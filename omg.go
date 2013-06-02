@@ -78,7 +78,7 @@ func main() {
   flag.Parse()
 
   num_cpus := runtime.NumCPU()
-  fmt.Println("Running with",num_cpus,"cpus")
+  fmt.Println("Running with",num_cpus,"procs")
   runtime.GOMAXPROCS(num_cpus)
 
   //

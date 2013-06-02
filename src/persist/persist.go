@@ -67,7 +67,7 @@ func StartPersist(comChan chan com.Command) (chan string, chan uint8) {
         var saveAOF *os.File
 
         aof_tick := time.Tick(1 * time.Second)
-        odb_tick := time.Tick(600 * time.Second)
+        odb_tick := time.Tick(60 * time.Second)
 
         reply := make(chan string)
 

@@ -44,7 +44,7 @@ func init() {
                 str_rep, ok := db.StoreDump(args[0])
                 if ok {
                     archive_chan <- ArchiveJob{args[0],str_rep}
-                    db.StoreSet(args[0],&data.Entry{0,19})
+                    db.StoreSet(args[0],&data.Entry{0,ArchiveType})
                     return reply.IntReply(1)
                 } else {
                     return reply.NilReply

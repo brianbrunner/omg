@@ -17,14 +17,19 @@ func init() {
 
     store.DefaultDBManager.AddFuncWithSideEffects("sadd", func (db *store.DB, args []string) string {
         e, ok, err := db.StoreGet(args[0], SetType)
+
         if err != nil {
             return reply.ErrorReply("Type Mismatch")
         }
-        setData, ok := e.Value.(map[string]bool)
+
+        var setData map[string]bool
         if !ok {
             setData = make(map[string]bool)
             db.StoreSet(args[0],&data.Entry{setData,SetType})
+        } else {
+          setData, _ = e.Value.(map[string]bool)
         }
+
         l := len(args)
         sdata := args[1:l]
         count := 0
@@ -44,6 +49,9 @@ func init() {
         if err != nil {
             return reply.ErrorReply("Type Mismatch")
         }
+        if !ok {
+          return reply.NilReply
+        }
 
         setData, ok := e.Value.(map[string]bool)
         if !ok {
@@ -71,6 +79,10 @@ func init() {
         if err != nil {
             return reply.ErrorReply("Type Mismatch")
         }
+        if !ok {
+          return reply.NilReply
+        }
+
         setData, ok := e.Value.(map[string]bool)
         if !ok {
             setData = make(map[string]bool)
@@ -90,9 +102,14 @@ func init() {
 
     store.DefaultDBManager.AddFunc("sismember", func (db *store.DB, args []string) string {
         e, ok, err := db.StoreGet(args[0], SetType)
+
         if err != nil || !ok {
             return "-ERR Type Mismatch\r\n"
         }
+        if !ok {
+          return reply.NilReply
+        }
+
         setData, ok := e.Value.(map[string]bool)
         if !ok {
             return reply.IntReply(0)
@@ -106,9 +123,14 @@ func init() {
 
     store.DefaultDBManager.AddFunc("scard", func (db *store.DB, args []string) string {
         e, ok, err := db.StoreGet(args[0], SetType)
+
         if err != nil || !ok {
             return reply.ErrorReply("Type Mismatch")
         }
+        if !ok {
+          return reply.NilReply
+        }
+
         setData, ok := e.Value.(map[string]bool)
         if ok {
             return reply.IntReply(len(setData))
@@ -118,9 +140,14 @@ func init() {
 
     store.DefaultDBManager.AddFuncWithSideEffects("spop", func (db *store.DB, args []string) string {
         e, ok, err := db.StoreGet(args[0], SetType)
+
         if err != nil || !ok {
             return "-ERR Type Mismatch\r\n"
         }
+        if !ok {
+          return reply.NilReply
+        }
+
         setData, ok := e.Value.(map[string]bool)
         if !ok {
             return reply.NilReply

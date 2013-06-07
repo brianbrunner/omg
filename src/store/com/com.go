@@ -1,8 +1,7 @@
 package com
 
 type Command struct {
-    Args []string
-    CommandRaw string
-    ReplyChan chan string
+	Args       []string
+	CommandRaw string
+	ReplyChan  chan string
 }
-

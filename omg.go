@@ -17,6 +17,7 @@ import (
   "persist"
   "config"
   "runtime"
+  "strings"
 
   // import all of our db functions
   _ "funcs"
@@ -32,6 +33,7 @@ func handleConn(client net.Conn, comChan chan com.Command) {
   c.Restart()
   reply := make(chan string)
   line := make([]byte, 1024)
+  checkSync := true
   var err error
   var done bool
   var n int
@@ -59,6 +61,13 @@ func handleConn(client net.Conn, comChan chan com.Command) {
     if done {
 
       for _, command := range commands {
+        if checkSync {
+          if strings.ToLower(command.Args[0]) == "sync" {
+            persist.StartSync(client)
+            return
+          }
+          checkSync = false
+        }
         command.ReplyChan = reply
         comChan <- command
         client.Write([]byte(<-reply))
@@ -86,6 +95,8 @@ func main() {
   //
 
   config.ParseConfigFile(*configfile)
+
+  store.DefaultDBManager.StartPersist()
 
   //
   // CPU and Memory Profiler Code

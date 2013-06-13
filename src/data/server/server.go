@@ -6,6 +6,7 @@ import (
 	"runtime/debug"
 	"store"
 	"store/reply"
+  "fmt"
 )
 
 func init() {
@@ -56,8 +57,7 @@ func init() {
 	})
 
 	store.DefaultDBManager.AddFunc("bgsave", func(db *store.DB, args []string) string {
-		db.StartSaveMode()
-		db.SaveToDiskAsync()
+		store.DefaultDBManager.SaveToDiskAsync()
 		return reply.OKReply
 	})
 
@@ -66,17 +66,8 @@ func init() {
 		return reply.OKReply
 	})
 
-	store.DefaultDBManager.AddFunc("load", func(db *store.DB, args []string) string {
-		err := db.LoadFromDiskSync()
-		if err != nil {
-			return reply.ErrorReply(err)
-		} else {
-			return reply.OKReply
-		}
-	})
-
 	store.DefaultDBManager.AddFunc("dbsize", func(db *store.DB, args []string) string {
-		return reply.IntReply(db.StoreSize())
+    return reply.IntReply(store.DefaultDBManager.DBSize())
 	})
 
 	store.DefaultDBManager.AddFunc("lastdump", func(db *store.DB, args []string) string {
@@ -95,6 +86,16 @@ func init() {
   store.DefaultDBManager.AddFunc("flush", func(db *store.DB, args []string) string {
     db.Flush()
     return reply.OKReply
+  })
+
+  store.DefaultDBManager.AddFunc("keysperdb", func(db *store.DB, args []string) string {
+    var w reply.MultiBulkWriter
+    dbs := store.DefaultDBManager.GetDBs()
+    w.WriteCount(len(dbs))
+    for _, db := range dbs {
+      w.WriteString(fmt.Sprintf("%d",len(db.Store)))
+    }
+    return w.String()
   })
 
 }

@@ -9,6 +9,7 @@ import (
 	"io"
 	"store"
 	"store/reply"
+  "data/strings"
 )
 
 type User struct {
@@ -75,7 +76,7 @@ func init() {
 					b := make([]byte, c)
 					n, err := io.ReadFull(rand.Reader, b)
 					if n != len(b) || err != nil {
-						return "-ERR Unable to generate a secure random token"
+						return reply.ErrorReply("Unable to generate a secure random token")
 					}
 					token := store.Base64Encode(b)
 					token_str := string(token)
@@ -95,5 +96,17 @@ func init() {
 			return reply.ErrorReply("No user exists with that username")
 		}
 	})
+
+  store.DefaultDBManager.AddFunc("usertoken", func(db *store.DB, args []string) string {
+    token := args[0]
+
+    e, ok, _ := db.StoreGet(token, strings.StringType)
+    if ok {
+      str, _ :=  e.Value.(string)
+      return reply.BulkReply(str)
+    } else {
+      return reply.ErrorReply("Invalid or expired token")
+    }
+  })
 
 }

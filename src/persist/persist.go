@@ -13,6 +13,17 @@ import (
   "io"
 )
 
+const (
+  PersistStateStarted = iota
+  PersistStateFailed
+  PersistStateFinished
+)
+
+const (
+  PersistStateOK = iota
+  PersistStateFail
+)
+
 var persistDisabled bool = true
 
 func LoadAppendOnlyFile(comChan chan com.Command) {
@@ -215,21 +226,21 @@ func StartPersist(comChan chan com.Command) (chan string, chan uint8) {
 
 			case state := <-stateChan:
 
-				if state == 0 {
+				if state == PersistStateStarted {
 
 					saveAOF, err = os.Create("/tmp/store.oaf")
 					if err != nil {
-						stateChan <- 0
+						stateChan <- PersistStateFail
 					} else {
-						stateChan <- 1
+						stateChan <- PersistStateOK
 					}
 
-				} else if state == 1 {
+				} else if state == PersistStateFailed {
 
 					saveAOF.Close()
-					stateChan <- 1
+					stateChan <- PersistStateOK
 
-				} else if state == 2 {
+				} else if state == PersistStateFinished {
 
           dumpFileToReplicas("./db/store.odb")
           for _, replica := range dumpToReplicas {
@@ -239,11 +250,11 @@ func StartPersist(comChan chan com.Command) (chan string, chan uint8) {
 					if saveAOF != nil {
 
 						if err = saveAOF.Sync(); err != nil {
-							stateChan <- 0
+							stateChan <- PersistStateFail
 						}
 
 						if err := os.Rename("/tmp/store.oaf", "./db/store.oaf"); err != nil {
-							stateChan <- 0
+							stateChan <- PersistStateFail
 						}
 
 						saveAOF = nil
@@ -282,11 +293,11 @@ func StartPersist(comChan chan com.Command) (chan string, chan uint8) {
 							panic(err)
 						}
 
-						stateChan <- 1
+						stateChan <- PersistStateOK
 
 					} else {
 
-						stateChan <- 0
+						stateChan <- PersistStateFail
 
 					}
 

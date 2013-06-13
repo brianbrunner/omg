@@ -8,11 +8,13 @@ import (
 )
 
 var Config = map[string]string{
+  "dump_file":    "./db/store.odb",
 	"maxmemory":    "inf",
 	"port":         "6379",
 	"dbfilename":   "dump.odb",
 	"dir":          "./",
   "aof_interval": "1",
+  "buckets": "16",
 }
 
 func ParseConfigFile(filepath string) {

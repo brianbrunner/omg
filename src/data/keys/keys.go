@@ -154,4 +154,9 @@ func init() {
 		return reply.NilReply
 	})
 
+	store.DefaultDBManager.AddFunc("ping", func(db *store.DB, args []string) string {
+		return reply.BulkReply("PONG")
+	})
+
+
 }

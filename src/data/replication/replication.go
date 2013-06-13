@@ -8,7 +8,6 @@ import (
   "parser"
   "store/com"
   "encoding/gob"
-  "data"
 )
 
 func init() {
@@ -16,7 +15,7 @@ func init() {
   slaveChan := make(chan string)
 
   var slaveConn net.Conn
-  
+
   go func() {
 
     c := parser.CommandParser{}
@@ -46,33 +45,14 @@ func init() {
           slaveConn.Write([]byte("*1\r\n$4\r\nSYNC\r\n"))
 
           go func() {
-        
-            db := store.DefaultDBManager.GetDB()
 
             db_dec := gob.NewDecoder(slaveConn)
-
-            var dbsize int
-            db_dec.Decode(&dbsize)
-
-            for i := 0; i < dbsize; i++ {
-
-              var key string
-              var elem *data.Entry
-              err = db_dec.Decode(&key)
-              if err != nil {
-                return
-              }
-              err = db_dec.Decode(&elem)
-              if err != nil {
-                return
-              }
-              db.StoreSet(key, elem)
-            }
+            store.DefaultDBManager.LoadFromGobDecoder(db_dec)
 
             for {
               n, err := slaveConn.Read(line[:])
               if err != nil {
-                return 
+                return
               }
 
               done, commands, err = c.ParseBytes(line[:n])
@@ -95,7 +75,7 @@ func init() {
 
             }
 
-          }()          
+          }()
 
         } else {
           slaveChan <- reply.ErrorReply(fmt.Sprintf("Unable to connect to server at %s",master))

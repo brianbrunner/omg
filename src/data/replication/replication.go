@@ -96,4 +96,15 @@ func init() {
 		return <-slaveChan
 	})
 
+  store.DefaultDBManager.AddFunc("movebucket", func(db *store.DB, args []string) string {
+    ip := args[0]
+    port := args[1]
+    bucket, err := strconv.Atoi(args[2])
+    if err != nil {
+      return reply.ErrorReply("Invalid bucket")
+    }
+    slaveChan <- fmt.Sprintf("%s:%s",ip,port)
+		return <-slaveChan
+  })
+
 }

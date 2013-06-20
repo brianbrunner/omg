@@ -14,7 +14,7 @@ var Config = map[string]string{
 	"dbfilename":   "dump.odb",
 	"dir":          "./",
   "aof_interval": "1",
-  "buckets": "16",
+  "dbs": "16",
 }
 
 func ParseConfigFile(filepath string) {

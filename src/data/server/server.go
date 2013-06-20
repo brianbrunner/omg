@@ -57,7 +57,7 @@ func init() {
 	})
 
 	store.DefaultDBManager.AddFunc("bgsave", func(db *store.DB, args []string) string {
-		store.DefaultDBManager.SaveToDiskAsync()
+		store.DefaultDBManager.SaveToDiskAsync(nil)
 		return reply.OKReply
 	})
 

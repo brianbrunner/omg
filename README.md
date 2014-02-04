@@ -1,6 +1,6 @@
 # omg
 
-Data persistance layer that is in-Memory, Object-oriented, and written in Go.
+Data persistance layer that is **O**bject-oriented, in-**M**emory, and written in **G**o.
 
 **Note: This project is currently on hiatus, but will likely come back once I've got. some time to get around to it**
 

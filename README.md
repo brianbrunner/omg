@@ -1,4 +1,4 @@
-# OMG!
+# OMG!!
 
 Data persistance layer that is **O**bject-oriented, in-**M**emory, and written in **G**o.
 
